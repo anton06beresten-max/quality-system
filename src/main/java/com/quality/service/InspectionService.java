@@ -119,7 +119,54 @@ public class InspectionService {
      * Добавить дефект к инспекции
      */
     public void addDefect(Defect defect) throws SQLException {
+
         defectDAO.create(defect);
+
+        // === ПОЛУЧАЕМ ТИП ДЕФЕКТА ===
+        DefectTypeDAO defectTypeDAO = new DefectTypeDAO();
+        DefectType type = defectTypeDAO.findAll()
+                .stream()
+                .filter(t -> t.getId() == defect.getDefectTypeId())
+                .findFirst()
+                .orElse(null);
+
+        if (type == null) return;
+
+        // === ПОЛУЧАЕМ ИНСПЕКЦИЮ ===
+        InspectionDAO inspectionDAO = new InspectionDAO();
+        List<Inspection> inspections =
+                inspectionDAO.findAll();
+
+        Inspection inspection =
+                inspections.stream()
+                        .filter(i -> i.getId() == defect.getInspectionId())
+                        .findFirst()
+                        .orElse(null);
+
+        if (inspection == null) return;
+
+        double penalty = 0;
+
+        switch (type.getSeverity()) {
+            case "LOW" -> penalty = 2;
+            case "MEDIUM" -> penalty = 5;
+            case "HIGH" -> penalty = 10;
+            case "CRITICAL" -> penalty = 20;
+        }
+
+        double newScore =
+                Math.max(0, inspection.getOverallScore() - penalty);
+
+        String newStatus =
+                type.getSeverity().equals("CRITICAL")
+                        ? "FAILED"
+                        : inspection.getStatus();
+
+        inspectionDAO.updateScore(
+                inspection.getId(),
+                newScore,
+                newStatus
+        );
     }
 
     /**

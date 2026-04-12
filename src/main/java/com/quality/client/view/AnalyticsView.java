@@ -1,6 +1,7 @@
 package com.quality.client.view;
 
 import com.quality.client.NetworkClient;
+import com.quality.model.Product;
 import com.quality.network.Response;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -19,213 +20,283 @@ public class AnalyticsView {
 
     @SuppressWarnings("unchecked")
     public Node getView() {
+
         TabPane tabs = new TabPane();
 
         tabs.getTabs().addAll(
                 createRatingsTab(),
-                createDefectStatsTab(),
-                createCategoryComparisonTab()
+                createTrendTab()
         );
+        tabs.getTabs().add(createDefectPieTab());
+        VBox root = new VBox(15);
+        root.setPadding(new Insets(15));
 
-        VBox root = new VBox(10);
-        root.setPadding(new Insets(10));
-
-        Label title = new Label("Аналитика и отчёты");
-        title.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+        Label title = new Label("Аналитика");
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 22));
 
         VBox.setVgrow(tabs, Priority.ALWAYS);
         root.getChildren().addAll(title, tabs);
+
         return root;
     }
 
+    // ============================================================
+    // 1️⃣ РЕЙТИНГ ПРОДУКЦИИ
+    // ============================================================
+
     @SuppressWarnings("unchecked")
     private Tab createRatingsTab() {
+
         Tab tab = new Tab("Рейтинг продукции");
         tab.setClosable(false);
 
         VBox content = new VBox(15);
         content.setPadding(new Insets(15));
 
-        Button loadBtn = ViewHelper.createButton("Загрузить рейтинг", "#3498db");
+        Button loadBtn =
+                ViewHelper.createButton("Загрузить рейтинг", "#3498db");
 
-        // Таблица
         TableView<Map<String, Object>> table = new TableView<>();
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        TableColumn<Map<String, Object>, String> nameCol = new TableColumn<>("Продукт");
-        nameCol.setCellValueFactory(c -> new SimpleStringProperty(
-                String.valueOf(c.getValue().get("productName"))));
+        TableColumn<Map<String, Object>, String> nameCol =
+                new TableColumn<>("Продукт");
+        nameCol.setCellValueFactory(c ->
+                new SimpleStringProperty(
+                        String.valueOf(c.getValue().get("productName"))));
 
-        TableColumn<Map<String, Object>, String> artCol = new TableColumn<>("Артикул");
-        artCol.setCellValueFactory(c -> new SimpleStringProperty(
-                String.valueOf(c.getValue().get("article"))));
+        TableColumn<Map<String, Object>, String> scoreCol =
+                new TableColumn<>("Средний балл");
+        scoreCol.setCellValueFactory(c ->
+                new SimpleStringProperty(
+                        String.valueOf(c.getValue().get("avgScore"))));
 
-        TableColumn<Map<String, Object>, String> scoreCol = new TableColumn<>("Средний балл");
-        scoreCol.setCellValueFactory(c -> new SimpleStringProperty(
-                String.valueOf(c.getValue().get("avgScore"))));
+        table.getColumns().addAll(nameCol, scoreCol);
 
-        TableColumn<Map<String, Object>, String> cntCol = new TableColumn<>("Инспекций");
-        cntCol.setCellValueFactory(c -> new SimpleStringProperty(
-                String.valueOf(c.getValue().get("inspectionCount"))));
-
-        table.getColumns().addAll(nameCol, artCol, scoreCol, cntCol);
-
-        // График
         CategoryAxis xAxis = new CategoryAxis();
+        xAxis.setTickLabelRotation(-45);
+        xAxis.setStyle("-fx-tick-label-font-size: 10;");
+
         NumberAxis yAxis = new NumberAxis(0, 100, 10);
-        xAxis.setLabel("Продукт");
         yAxis.setLabel("Средний балл");
-        BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
-        chart.setTitle("Рейтинг продукции по качеству");
-        chart.setPrefHeight(300);
+
+        BarChart<String, Number> chart =
+                new BarChart<>(xAxis, yAxis);
         chart.setLegendVisible(false);
+        chart.setAnimated(false);
+        chart.setPrefHeight(400);
 
         loadBtn.setOnAction(e -> {
-            try {
-                Response resp = NetworkClient.getInstance().sendRequest("GET_PRODUCT_RATINGS");
-                if (resp.isSuccess()) {
-                    List<Map<String, Object>> data = (List<Map<String, Object>>) resp.getData();
-                    table.getItems().setAll(FXCollections.observableArrayList(data));
 
-                    XYChart.Series<String, Number> series = new XYChart.Series<>();
+            try {
+
+                Response resp =
+                        NetworkClient.getInstance()
+                                .sendRequest("GET_PRODUCT_RATINGS");
+
+                if (resp.isSuccess()) {
+
+                    List<Map<String, Object>> data =
+                            (List<Map<String, Object>>) resp.getData();
+
+                    table.setItems(
+                            FXCollections.observableArrayList(data));
+
+                    XYChart.Series<String, Number> series =
+                            new XYChart.Series<>();
+
                     for (Map<String, Object> row : data) {
-                        String name = String.valueOf(row.get("productName"));
-                        double score = ((Number) row.get("avgScore")).doubleValue();
-                        series.getData().add(new XYChart.Data<>(name, score));
+
+                        String name =
+                                String.valueOf(row.get("productName"));
+
+                        double score =
+                                ((Number) row.get("avgScore"))
+                                        .doubleValue();
+
+                        series.getData().add(
+                                new XYChart.Data<>(name, score));
                     }
+
                     chart.getData().clear();
                     chart.getData().add(series);
                 }
-            } catch (Exception ex) { ViewHelper.showError(ex.getMessage()); }
+
+            } catch (Exception ex) {
+                ViewHelper.showError("Ошибка аналитики: "
+                        + ex.getMessage());
+            }
         });
 
         VBox.setVgrow(table, Priority.ALWAYS);
         content.getChildren().addAll(loadBtn, chart, table);
         tab.setContent(content);
+
         return tab;
     }
 
+    // ============================================================
+    // 2️⃣ ТРЕНД КАЧЕСТВА ПРОДУКТА (НОВОЕ)
+    // ============================================================
+
     @SuppressWarnings("unchecked")
-    private Tab createDefectStatsTab() {
+    private Tab createTrendTab() {
+
+        Tab tab = new Tab("Тренд качества");
+        tab.setClosable(false);
+
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(15));
+
+        ComboBox<Product> productCombo =
+                new ComboBox<>();
+        productCombo.setPrefWidth(350);
+
+        Button loadBtn =
+                ViewHelper.createButton("Построить график", "#27ae60");
+
+        // Загружаем продукты
+        try {
+            Response resp =
+                    NetworkClient.getInstance()
+                            .sendRequest("GET_PRODUCTS");
+
+            if (resp.isSuccess()) {
+                productCombo.getItems()
+                        .addAll((List<Product>)
+                                resp.getData());
+            }
+
+        } catch (Exception ignored) {}
+
+        CategoryAxis xAxis = new CategoryAxis();
+        xAxis.setLabel("Дата");
+
+        NumberAxis yAxis = new NumberAxis(0, 100, 10);
+        yAxis.setLabel("Средний балл");
+
+        LineChart<String, Number> lineChart =
+                new LineChart<>(xAxis, yAxis);
+
+        lineChart.setTitle("Динамика качества");
+        lineChart.setAnimated(false);
+        lineChart.setPrefHeight(450);
+
+        loadBtn.setOnAction(e -> {
+
+            if (productCombo.getValue() == null) {
+                ViewHelper.showError("Выберите продукт");
+                return;
+            }
+
+            try {
+
+                Response resp =
+                        NetworkClient.getInstance()
+                                .sendRequest(
+                                        "GET_QUALITY_TREND",
+                                        productCombo.getValue().getId());
+
+                if (resp.isSuccess()) {
+
+                    List<Map<String, Object>> data =
+                            (List<Map<String, Object>>) resp.getData();
+
+                    XYChart.Series<String, Number> series =
+                            new XYChart.Series<>();
+
+                    series.setName(
+                            productCombo.getValue().getName());
+
+                    for (Map<String, Object> row : data) {
+
+                        String date =
+                                String.valueOf(row.get("date"));
+
+                        double score =
+                                ((Number) row.get("avgScore"))
+                                        .doubleValue();
+
+                        series.getData().add(
+                                new XYChart.Data<>(date, score));
+                    }
+
+                    lineChart.getData().clear();
+                    lineChart.getData().add(series);
+                }
+
+            } catch (Exception ex) {
+                ViewHelper.showError("Ошибка тренда: "
+                        + ex.getMessage());
+            }
+        });
+
+        content.getChildren().addAll(
+                new Label("Продукт:"),
+                productCombo,
+                loadBtn,
+                lineChart
+        );
+
+        tab.setContent(content);
+        return tab;
+    }
+    @SuppressWarnings("unchecked")
+    private Tab createDefectPieTab() {
+
         Tab tab = new Tab("Статистика дефектов");
         tab.setClosable(false);
 
         VBox content = new VBox(15);
         content.setPadding(new Insets(15));
 
-        Button loadBtn = ViewHelper.createButton("Загрузить статистику", "#3498db");
+        Button loadBtn =
+                ViewHelper.createButton("Загрузить дефекты", "#e67e22");
 
-        // Таблица
-        TableView<Map<String, Object>> table = new TableView<>();
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-
-        TableColumn<Map<String, Object>, String> typeCol = new TableColumn<>("Тип дефекта");
-        typeCol.setCellValueFactory(c -> new SimpleStringProperty(
-                String.valueOf(c.getValue().get("defectType"))));
-
-        TableColumn<Map<String, Object>, String> sevCol = new TableColumn<>("Серьёзность");
-        sevCol.setCellValueFactory(c -> new SimpleStringProperty(
-                String.valueOf(c.getValue().get("severity"))));
-
-        TableColumn<Map<String, Object>, String> cntCol = new TableColumn<>("Количество");
-        cntCol.setCellValueFactory(c -> new SimpleStringProperty(
-                String.valueOf(c.getValue().get("totalQuantity"))));
-
-        table.getColumns().addAll(typeCol, sevCol, cntCol);
-
-        // Круговая диаграмма
         PieChart pieChart = new PieChart();
         pieChart.setTitle("Распределение дефектов");
-        pieChart.setPrefHeight(300);
 
         loadBtn.setOnAction(e -> {
+
             try {
-                Response resp = NetworkClient.getInstance().sendRequest("GET_DEFECT_STATISTICS");
+
+                Response resp =
+                        NetworkClient.getInstance()
+                                .sendRequest("GET_DEFECT_STATISTICS");
+
                 if (resp.isSuccess()) {
-                    List<Map<String, Object>> data = (List<Map<String, Object>>) resp.getData();
-                    table.getItems().setAll(FXCollections.observableArrayList(data));
+
+                    List<Map<String, Object>> data =
+                            (List<Map<String, Object>>) resp.getData();
 
                     pieChart.getData().clear();
+
                     for (Map<String, Object> row : data) {
-                        String name = String.valueOf(row.get("defectType"));
-                        int qty = ((Number) row.get("totalQuantity")).intValue();
+
+                        int qty =
+                                ((Number) row.get("totalQuantity"))
+                                        .intValue();
+
                         if (qty > 0) {
-                            pieChart.getData().add(new PieChart.Data(name, qty));
+                            pieChart.getData().add(
+                                    new PieChart.Data(
+                                            String.valueOf(
+                                                    row.get("defectType")),
+                                            qty
+                                    )
+                            );
                         }
                     }
                 }
-            } catch (Exception ex) { ViewHelper.showError(ex.getMessage()); }
+
+            } catch (Exception ex) {
+                ViewHelper.showError("Ошибка дефектов: "
+                        + ex.getMessage());
+            }
         });
 
-        VBox.setVgrow(table, Priority.ALWAYS);
-        content.getChildren().addAll(loadBtn, pieChart, table);
-        tab.setContent(content);
-        return tab;
-    }
+        content.getChildren().addAll(loadBtn, pieChart);
 
-    @SuppressWarnings("unchecked")
-    private Tab createCategoryComparisonTab() {
-        Tab tab = new Tab("Сравнение по категориям");
-        tab.setClosable(false);
-
-        VBox content = new VBox(15);
-        content.setPadding(new Insets(15));
-
-        Button loadBtn = ViewHelper.createButton("Загрузить данные", "#3498db");
-
-        // Таблица
-        TableView<Map<String, Object>> table = new TableView<>();
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-
-        TableColumn<Map<String, Object>, String> catCol = new TableColumn<>("Категория");
-        catCol.setCellValueFactory(c -> new SimpleStringProperty(
-                String.valueOf(c.getValue().get("categoryName"))));
-
-        TableColumn<Map<String, Object>, String> scoreCol = new TableColumn<>("Средний балл");
-        scoreCol.setCellValueFactory(c -> new SimpleStringProperty(
-                String.valueOf(c.getValue().get("avgScore"))));
-
-        TableColumn<Map<String, Object>, String> prodCol = new TableColumn<>("Продуктов");
-        prodCol.setCellValueFactory(c -> new SimpleStringProperty(
-                String.valueOf(c.getValue().get("productCount"))));
-
-        TableColumn<Map<String, Object>, String> inspCol = new TableColumn<>("Инспекций");
-        inspCol.setCellValueFactory(c -> new SimpleStringProperty(
-                String.valueOf(c.getValue().get("inspectionCount"))));
-
-        table.getColumns().addAll(catCol, scoreCol, prodCol, inspCol);
-
-        // Гистограмма
-        CategoryAxis xAxis = new CategoryAxis();
-        NumberAxis yAxis = new NumberAxis(0, 100, 10);
-        xAxis.setLabel("Категория");
-        yAxis.setLabel("Средний балл");
-        BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
-        chart.setTitle("Сравнение качества по категориям");
-        chart.setPrefHeight(300);
-        chart.setLegendVisible(false);
-
-        loadBtn.setOnAction(e -> {
-            try {
-                Response resp = NetworkClient.getInstance().sendRequest("GET_CATEGORY_COMPARISON");
-                if (resp.isSuccess()) {
-                    List<Map<String, Object>> data = (List<Map<String, Object>>) resp.getData();
-                    table.getItems().setAll(FXCollections.observableArrayList(data));
-
-                    XYChart.Series<String, Number> series = new XYChart.Series<>();
-                    for (Map<String, Object> row : data) {
-                        String name = String.valueOf(row.get("categoryName"));
-                        double score = ((Number) row.get("avgScore")).doubleValue();
-                        series.getData().add(new XYChart.Data<>(name, score));
-                    }
-                    chart.getData().clear();
-                    chart.getData().add(series);
-                }
-            } catch (Exception ex) { ViewHelper.showError(ex.getMessage()); }
-        });
-
-        VBox.setVgrow(table, Priority.ALWAYS);
-        content.getChildren().addAll(loadBtn, chart, table);
         tab.setContent(content);
         return tab;
     }

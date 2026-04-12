@@ -94,13 +94,13 @@ public class MainView {
             addMenuItem("Продукция", "products");
             addMenuItem("Стандарты", "standards");
             addMenuItem("Критерии", "criteria");
+            addMenuItem("Критерии стандартов", "standard_criteria");
             addMenuItem("Типы дефектов", "defect_types");
             addSectionLabel("Контроль качества");
             addMenuItem("Провести инспекцию", "conduct");
             addMenuItem("Все инспекции", "inspections");
             addSectionLabel("Отчёты");
-            addMenuItem("Аналитика", "analytics");
-        }
+            addMenuItem("Аналитика", "analytics");}
 
         // Инспектор
         if (Session.isInspector()) {
@@ -173,6 +173,7 @@ public class MainView {
             case "inspections":     view = new InspectionListView(false).getView(); break;
             case "my_inspections":  view = new InspectionListView(true).getView(); break;
             case "analytics":       view = new AnalyticsView().getView(); break;
+            case "standard_criteria": view = new StandardCriteriaView().getView(); break;
             default:                view = new DashboardView().getView(); break;
         }
         contentArea.getChildren().add(view);

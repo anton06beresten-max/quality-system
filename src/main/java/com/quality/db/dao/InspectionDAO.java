@@ -158,4 +158,29 @@ public class InspectionDAO {
         i.setInspectorName(rs.getString("inspector_name"));
         return i;
     }
+    public Inspection findById(int id) throws SQLException {
+
+        String sql =
+                "SELECT i.id, i.product_id, i.standard_id, i.inspector_id, " +
+                        "i.inspection_date, i.batch_number, i.overall_score, i.status, i.notes, " +
+                        "p.name AS product_name, s.name AS standard_name, u.full_name AS inspector_name " +
+                        "FROM inspections i " +
+                        "JOIN products p ON i.product_id = p.id " +
+                        "JOIN quality_standards s ON i.standard_id = s.id " +
+                        "JOIN users u ON i.inspector_id = u.id " +
+                        "WHERE i.id = ?";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return mapInspection(rs);
+            }
+        }
+
+        return null;
+    }
 }
