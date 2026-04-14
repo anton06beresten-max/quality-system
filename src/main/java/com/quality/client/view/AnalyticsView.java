@@ -40,9 +40,7 @@ public class AnalyticsView {
         return root;
     }
 
-    // ============================================================
-    // 1️⃣ РЕЙТИНГ ПРОДУКЦИИ
-    // ============================================================
+
 
     @SuppressWarnings("unchecked")
     private Tab createRatingsTab() {
@@ -135,9 +133,6 @@ public class AnalyticsView {
         return tab;
     }
 
-    // ============================================================
-    // 2️⃣ ТРЕНД КАЧЕСТВА ПРОДУКТА (НОВОЕ)
-    // ============================================================
 
     @SuppressWarnings("unchecked")
     private Tab createTrendTab() {

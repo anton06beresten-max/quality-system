@@ -23,7 +23,7 @@ public class LoginView {
 
     public void show() {
         // Заголовок
-        Label title = new Label("Система оценки качества");
+        Label title = new Label("Оценка качества");
         title.setFont(Font.font("Arial", FontWeight.BOLD, 28));
         title.setStyle("-fx-text-fill: #2c3e50;");
 
