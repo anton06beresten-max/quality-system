@@ -147,6 +147,32 @@ public class AnalyticsView {
                 new ComboBox<>();
         productCombo.setPrefWidth(350);
 
+// ✅ ДОБАВИТЬ ЭТО СЮДА
+        productCombo.setConverter(new javafx.util.StringConverter<Product>() {
+            @Override
+            public String toString(Product product) {
+                if (product == null) return "";
+                return product.getName() + " (" + product.getArticle() + ")";
+            }
+
+            @Override
+            public Product fromString(String string) {
+                return null;
+            }
+        });
+
+        productCombo.setCellFactory(listView -> new ListCell<>() {
+            @Override
+            protected void updateItem(Product product, boolean empty) {
+                super.updateItem(product, empty);
+                if (empty || product == null) {
+                    setText(null);
+                } else {
+                    setText(product.getName() + " (" + product.getArticle() + ")");
+                }
+            }
+        });
+
         Button loadBtn =
                 ViewHelper.createButton("Построить график", "#27ae60");
 

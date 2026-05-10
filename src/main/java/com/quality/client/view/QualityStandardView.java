@@ -31,7 +31,9 @@ public class QualityStandardView {
         Button addBtn = ViewHelper.createButton("Добавить", "#27ae60");
         Button deleteBtn = ViewHelper.createButton("Удалить", "#e74c3c");
         Button refreshBtn = ViewHelper.createButton("Обновить", "#3498db");
-        HBox toolbar = new HBox(10, addBtn, deleteBtn, refreshBtn);
+        Button editBtn = ViewHelper.createButton("Редактировать", "#f39c12");
+
+        HBox toolbar = new HBox(10, addBtn,editBtn, deleteBtn, refreshBtn);
 
         table = new TableView<>();
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -58,12 +60,73 @@ public class QualityStandardView {
         addBtn.setOnAction(e -> showAddDialog());
         deleteBtn.setOnAction(e -> handleDelete());
         refreshBtn.setOnAction(e -> loadData());
+        editBtn.setOnAction(e -> showEditDialog());
 
         root.getChildren().addAll(title, toolbar, table);
         loadData();
         return root;
     }
+    @SuppressWarnings("unchecked")
+    private void showEditDialog() {
 
+        QualityStandard selected =
+                table.getSelectionModel().getSelectedItem();
+
+        if (selected == null) {
+            ViewHelper.showError("Выберите стандарт!");
+            return;
+        }
+
+        Dialog<QualityStandard> dialog = new Dialog<>();
+        dialog.setTitle("Редактирование стандарта");
+        dialog.getDialogPane().getButtonTypes()
+                .addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        TextField nameField =
+                new TextField(selected.getName());
+        TextField descField =
+                new TextField(selected.getDescription());
+
+        VBox box = new VBox(10,
+                new Label("Название:"), nameField,
+                new Label("Описание:"), descField);
+
+        dialog.getDialogPane().setContent(box);
+
+        dialog.setResultConverter(btn -> {
+            if (btn == ButtonType.OK) {
+
+                if (nameField.getText().isBlank()) {
+                    ViewHelper.showError("Название не может быть пустым.");
+                    return null;
+                }
+
+                selected.setName(nameField.getText());
+                selected.setDescription(descField.getText());
+
+                return selected;
+            }
+            return null;
+        });
+
+        dialog.showAndWait().ifPresent(standard -> {
+            try {
+                Response resp =
+                        NetworkClient.getInstance()
+                                .sendRequest("UPDATE_STANDARD", standard);
+
+                if (resp.isSuccess()) {
+                    ViewHelper.showInfo("Стандарт обновлён.");
+                    loadData();
+                } else {
+                    ViewHelper.showError(resp.getMessage());
+                }
+
+            } catch (Exception e) {
+                ViewHelper.showError("Ошибка обновления стандарта.");
+            }
+        });
+    }
     @SuppressWarnings("unchecked")
     private void loadData() {
         try {

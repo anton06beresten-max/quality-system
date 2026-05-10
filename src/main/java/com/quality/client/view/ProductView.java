@@ -38,8 +38,9 @@ public class ProductView {
         Button addBtn = ViewHelper.createButton("Добавить", "#27ae60");
         Button deleteBtn = ViewHelper.createButton("Удалить", "#e74c3c");
         Button refreshBtn = ViewHelper.createButton("Обновить", "#3498db");
+        Button editBtn = ViewHelper.createButton("Редактировать", "#f39c12");
 
-        HBox toolbar = new HBox(10, searchField, searchBtn, addBtn, deleteBtn, refreshBtn);
+        HBox toolbar = new HBox(10, searchField, searchBtn,editBtn, addBtn, deleteBtn, refreshBtn);
 
         table = new TableView<>();
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -66,10 +67,60 @@ public class ProductView {
         addBtn.setOnAction(e -> showAddDialog());
         deleteBtn.setOnAction(e -> handleDelete());
         refreshBtn.setOnAction(e -> loadData());
+        editBtn.setOnAction(e -> showEditDialog());
 
         root.getChildren().addAll(title, toolbar, table);
         loadData();
         return root;
+    }
+
+    private void showEditDialog() {
+        Product selected =
+                table.getSelectionModel().getSelectedItem();
+
+        if (selected == null) {
+            ViewHelper.showError("Выберите продукцию!");
+            return;
+        }
+
+        TextField nameField =
+                new TextField(selected.getName());
+        TextField articleField =
+                new TextField(selected.getArticle());
+        TextField descField =
+                new TextField(selected.getDescription());
+
+        Dialog<Product> dialog = new Dialog<>();
+        dialog.setTitle("Редактирование продукции");
+        dialog.getDialogPane().getButtonTypes()
+                .addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        VBox box = new VBox(10,
+                new Label("Название:"), nameField,
+                new Label("Артикул:"), articleField,
+                new Label("Описание:"), descField);
+
+        dialog.getDialogPane().setContent(box);
+
+        dialog.setResultConverter(btn -> {
+            if (btn == ButtonType.OK) {
+                selected.setName(nameField.getText());
+                selected.setArticle(articleField.getText());
+                selected.setDescription(descField.getText());
+                return selected;
+            }
+            return null;
+        });
+
+        dialog.showAndWait().ifPresent(p -> {
+            try {
+                NetworkClient.getInstance()
+                        .sendRequest("UPDATE_PRODUCT", p);
+                loadData();
+            } catch (Exception e) {
+                ViewHelper.showError(e.getMessage());
+            }
+        });
     }
 
     @SuppressWarnings("unchecked")

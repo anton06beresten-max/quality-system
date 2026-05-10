@@ -23,7 +23,7 @@ public class Response implements Serializable {
     public static Response ok(String message, Object data) {
         Response r = new Response();
         r.success = true;
-        r.message = message;
+        r.message = message != null ? message : "Операция выполнена успешно.";
         r.data = data;
         return r;
     }
@@ -31,7 +31,7 @@ public class Response implements Serializable {
     public static Response error(String message) {
         Response r = new Response();
         r.success = false;
-        r.message = message;
+        r.message = message != null ? message : "Произошла ошибка.";
         r.data = null;
         return r;
     }

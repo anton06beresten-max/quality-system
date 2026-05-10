@@ -29,7 +29,9 @@ public class CriteriaView {
         Button addBtn = ViewHelper.createButton("Добавить", "#27ae60");
         Button deleteBtn = ViewHelper.createButton("Удалить", "#e74c3c");
         Button refreshBtn = ViewHelper.createButton("Обновить", "#3498db");
-        HBox toolbar = new HBox(10, addBtn, deleteBtn, refreshBtn);
+        Button editBtn = ViewHelper.createButton("Редактировать", "#f39c12");
+
+        HBox toolbar = new HBox(10, addBtn,editBtn, deleteBtn, refreshBtn);
 
         table = new TableView<>();
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -52,12 +54,77 @@ public class CriteriaView {
         addBtn.setOnAction(e -> showAddDialog());
         deleteBtn.setOnAction(e -> handleDelete());
         refreshBtn.setOnAction(e -> loadData());
+        editBtn.setOnAction(e -> showEditDialog());
 
         root.getChildren().addAll(title, toolbar, table);
         loadData();
         return root;
     }
+    @SuppressWarnings("unchecked")
+    private void showEditDialog() {
 
+        QualityCriteria selected =
+                table.getSelectionModel().getSelectedItem();
+
+        if (selected == null) {
+            ViewHelper.showError("Выберите критерий!");
+            return;
+        }
+
+        Dialog<QualityCriteria> dialog = new Dialog<>();
+        dialog.setTitle("Редактирование критерия");
+        dialog.getDialogPane().getButtonTypes()
+                .addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        TextField nameField =
+                new TextField(selected.getName());
+        TextField unitField =
+                new TextField(selected.getUnit());
+        TextField descField =
+                new TextField(selected.getDescription());
+
+        VBox box = new VBox(10,
+                new Label("Название:"), nameField,
+                new Label("Единица измерения:"), unitField,
+                new Label("Описание:"), descField);
+
+        dialog.getDialogPane().setContent(box);
+
+        dialog.setResultConverter(btn -> {
+            if (btn == ButtonType.OK) {
+
+                if (nameField.getText().isBlank()) {
+                    ViewHelper.showError("Название не может быть пустым.");
+                    return null;
+                }
+
+                selected.setName(nameField.getText());
+                selected.setUnit(unitField.getText());
+                selected.setDescription(descField.getText());
+
+                return selected;
+            }
+            return null;
+        });
+
+        dialog.showAndWait().ifPresent(criteria -> {
+            try {
+                Response resp =
+                        NetworkClient.getInstance()
+                                .sendRequest("UPDATE_CRITERIA", criteria);
+
+                if (resp.isSuccess()) {
+                    ViewHelper.showInfo("Критерий обновлён.");
+                    loadData();
+                } else {
+                    ViewHelper.showError(resp.getMessage());
+                }
+
+            } catch (Exception e) {
+                ViewHelper.showError("Ошибка обновления критерия.");
+            }
+        });
+    }
     @SuppressWarnings("unchecked")
     private void loadData() {
         try {

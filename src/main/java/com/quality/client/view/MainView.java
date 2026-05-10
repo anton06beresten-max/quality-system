@@ -55,7 +55,7 @@ public class MainView {
         title.setStyle("-fx-text-fill: white;");
 
         Label userLabel = new Label(Session.getCurrentUser().getFullName() +
-                " [" + Session.getRole() + "]");
+                " [" + Session.getCurrentUser().getRoleDisplayName() + "]");
         userLabel.setStyle("-fx-text-fill: #bdc3c7; -fx-font-size: 13;");
 
         Button logoutBtn = new Button("Выход");

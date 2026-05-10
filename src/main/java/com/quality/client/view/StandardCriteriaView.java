@@ -32,6 +32,31 @@ public class StandardCriteriaView {
         standardCombo = new ComboBox<>();
         standardCombo.setPrefWidth(350);
 
+        standardCombo.setConverter(new javafx.util.StringConverter<QualityStandard>() {
+            @Override
+            public String toString(QualityStandard standard) {
+                if (standard == null) return "";
+                return standard.getName();
+            }
+
+            @Override
+            public QualityStandard fromString(String string) {
+                return null;
+            }
+        });
+
+        standardCombo.setCellFactory(listView -> new ListCell<>() {
+            @Override
+            protected void updateItem(QualityStandard standard, boolean empty) {
+                super.updateItem(standard, empty);
+                if (empty || standard == null) {
+                    setText(null);
+                } else {
+                    setText(standard.getName());
+                }
+            }
+        });
+
         Button loadBtn =
                 ViewHelper.createButton("Загрузить", "#3498db");
 

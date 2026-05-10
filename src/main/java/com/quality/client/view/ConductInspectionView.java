@@ -36,7 +36,64 @@ public class ConductInspectionView {
         title.setFont(Font.font("Arial", FontWeight.BOLD, 22));
 
         productCombo = new ComboBox<>();
+
+        productCombo.setConverter(new javafx.util.StringConverter<Product>() {
+            @Override
+            public String toString(Product product) {
+                if (product == null) return "";
+                return product.getName() + " (" + product.getArticle() + ")";
+            }
+
+            @Override
+            public Product fromString(String string) {
+                return null; // не используется
+            }
+        });
+
+        productCombo.setCellFactory(listView -> new ListCell<>() {
+            @Override
+            protected void updateItem(Product product, boolean empty) {
+                super.updateItem(product, empty);
+                if (empty || product == null) {
+                    setText(null);
+                } else {
+                    setText(product.getName() + " (" + product.getArticle() + ")");
+                }
+            }
+        });
+
+
+
+
         standardCombo = new ComboBox<>();
+
+        standardCombo = new ComboBox<>();
+
+        standardCombo.setConverter(new javafx.util.StringConverter<QualityStandard>() {
+            @Override
+            public String toString(QualityStandard standard) {
+                if (standard == null) return "";
+                return standard.getName();
+            }
+
+            @Override
+            public QualityStandard fromString(String string) {
+                return null;
+            }
+        });
+
+        standardCombo.setCellFactory(listView -> new ListCell<>() {
+            @Override
+            protected void updateItem(QualityStandard standard, boolean empty) {
+                super.updateItem(standard, empty);
+                if (empty || standard == null) {
+                    setText(null);
+                } else {
+                    setText(standard.getName());
+                }
+            }
+        });
+
         criteriaBox = new VBox(10);
 
         loadProducts();

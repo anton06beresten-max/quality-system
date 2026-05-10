@@ -15,6 +15,9 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.stage.FileChooser;
+import java.io.File;
+import java.io.PrintWriter;
 
 import java.util.List;
 
@@ -43,6 +46,7 @@ public class InspectionListView {
         Button filterBtn = ViewHelper.createButton("Фильтр", "#8e44ad");
         Button detailsBtn = ViewHelper.createButton("Подробнее", "#2980b9");
         Button refreshBtn = ViewHelper.createButton("Обновить", "#3498db");
+        Button exportBtn = ViewHelper.createButton("Экспорт CSV", "#8e44ad");
 
         filterBtn.setOnAction(e -> {
             if (dateFrom.getValue() != null && dateTo.getValue() != null) {
@@ -50,7 +54,7 @@ public class InspectionListView {
             }
         });
 
-        HBox toolbar = new HBox(10, dateFrom, dateTo, filterBtn, detailsBtn, refreshBtn);
+        HBox toolbar = new HBox(10, dateFrom, dateTo,exportBtn, filterBtn, detailsBtn, refreshBtn);
 
         table = new TableView<>();
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -77,18 +81,42 @@ public class InspectionListView {
         scoreCol.setCellValueFactory(c -> new SimpleDoubleProperty(c.getValue().getOverallScore()));
 
         TableColumn<Inspection, String> statusCol = new TableColumn<>("Статус");
-        statusCol.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getStatus()));
+
+        statusCol.setCellValueFactory(c -> {
+            String status = c.getValue().getStatus();
+            String display;
+
+            if ("PASSED".equals(status)) {
+                display = "Соответствует";
+            } else if ("FAILED".equals(status)) {
+                display = "Не соответствует";
+            } else {
+                display = status;
+            }
+
+            return new SimpleStringProperty(display);
+        });
+
         statusCol.setCellFactory(col -> new TableCell<Inspection, String>() {
+            @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); setStyle(""); return; }
+
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                    return;
+                }
+
                 setText(item);
-                if ("PASSED".equals(item))
+
+                if ("Соответствует".equals(item)) {
                     setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
-                else if ("FAILED".equals(item))
+                } else if ("Не соответствует".equals(item)) {
                     setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
-                else
+                } else {
                     setStyle("-fx-text-fill: orange;");
+                }
             }
         });
 
@@ -97,6 +125,7 @@ public class InspectionListView {
 
         detailsBtn.setOnAction(e -> showDetails());
         refreshBtn.setOnAction(e -> loadData());
+        exportBtn.setOnAction(e -> exportToCSV());
 
         root.getChildren().addAll(title, toolbar, table);
         loadData();
@@ -201,5 +230,52 @@ public class InspectionListView {
             dialog.showAndWait();
 
         } catch (Exception e) { ViewHelper.showError(e.getMessage()); }
+    }
+    private void exportToCSV() {
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Сохранить отчёт");
+        fileChooser.getExtensionFilters()
+                .add(new FileChooser.ExtensionFilter("CSV", "*.csv"));
+
+        File file = fileChooser.showSaveDialog(null);
+
+        if (file == null) return;
+
+        try (PrintWriter writer =
+                     new PrintWriter(file, "UTF-8")) {
+
+            // Заголовок
+            writer.println("ID;Продукт;Стандарт;Инспектор;Дата;Балл;Статус");
+
+            for (Inspection i : table.getItems()) {
+
+                String status = i.getStatus();
+                String displayStatus;
+
+                if ("PASSED".equals(status)) {
+                    displayStatus = "Соответствует";
+                } else if ("FAILED".equals(status)) {
+                    displayStatus = "Не соответствует";
+                } else {
+                    displayStatus = status;
+                }
+
+                writer.println(
+                        i.getId() + ";" +
+                                i.getProductName() + ";" +
+                                i.getStandardName() + ";" +
+                                i.getInspectorName() + ";" +
+                                i.getInspectionDate() + ";" +
+                                i.getOverallScore() + ";" +
+                                displayStatus
+                );
+            }
+
+            ViewHelper.showInfo("Отчёт успешно сохранён.");
+
+        } catch (Exception e) {
+            ViewHelper.showError("Ошибка при сохранении отчёта.");
+        }
     }
 }

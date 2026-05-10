@@ -29,7 +29,8 @@ public class ProductCategoryView {
         Button addBtn = ViewHelper.createButton("Добавить", "#27ae60");
         Button deleteBtn = ViewHelper.createButton("Удалить", "#e74c3c");
         Button refreshBtn = ViewHelper.createButton("Обновить", "#3498db");
-        HBox toolbar = new HBox(10, addBtn, deleteBtn, refreshBtn);
+        Button editBtn = ViewHelper.createButton("Редактировать", "#f39c12");
+        HBox toolbar = new HBox(10, addBtn, editBtn, deleteBtn, refreshBtn);
 
         table = new TableView<>();
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -50,12 +51,55 @@ public class ProductCategoryView {
         addBtn.setOnAction(e -> showAddDialog());
         deleteBtn.setOnAction(e -> handleDelete());
         refreshBtn.setOnAction(e -> loadData());
+        editBtn.setOnAction(e -> showEditDialog());
 
         root.getChildren().addAll(title, toolbar, table);
         loadData();
         return root;
     }
+    private void showEditDialog() {
 
+        ProductCategory selected =
+                table.getSelectionModel().getSelectedItem();
+
+        if (selected == null) {
+            ViewHelper.showError("Выберите категорию!");
+            return;
+        }
+
+        Dialog<ProductCategory> dialog = new Dialog<>();
+        dialog.setTitle("Редактирование категории");
+        dialog.getDialogPane().getButtonTypes()
+                .addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        TextField nameField = new TextField(selected.getName());
+        TextField descField = new TextField(selected.getDescription());
+
+        VBox box = new VBox(10,
+                new Label("Название:"), nameField,
+                new Label("Описание:"), descField);
+
+        dialog.getDialogPane().setContent(box);
+
+        dialog.setResultConverter(btn -> {
+            if (btn == ButtonType.OK) {
+                selected.setName(nameField.getText());
+                selected.setDescription(descField.getText());
+                return selected;
+            }
+            return null;
+        });
+
+        dialog.showAndWait().ifPresent(cat -> {
+            try {
+                NetworkClient.getInstance()
+                        .sendRequest("UPDATE_CATEGORY", cat);
+                loadData();
+            } catch (Exception e) {
+                ViewHelper.showError(e.getMessage());
+            }
+        });
+    }
     @SuppressWarnings("unchecked")
     private void loadData() {
         try {

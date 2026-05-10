@@ -7,7 +7,7 @@ import com.quality.network.Response;
 import com.quality.service.AnalyticsService;
 import com.quality.service.InspectionService;
 import com.quality.util.PasswordUtil;
-
+import java.sql.SQLException;
 import java.io.*;
 import java.net.Socket;
 import java.util.List;
@@ -183,6 +183,10 @@ public class ClientHandler implements Runnable {
                     return Response.ok("Стандарт обновлён", null);
                 }
 
+                case "UPDATE_CRITERIA":
+                    criteriaDAO.update((QualityCriteria) data);
+                    return Response.ok("Критерий обновлён.", null);
+
                 case "DELETE_STANDARD": {
                     standardDAO.delete((int) data);
                     return Response.ok("Стандарт удалён", null);
@@ -295,9 +299,31 @@ public class ClientHandler implements Runnable {
                     return Response.error("Неизвестная команда: " + action);
             }
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            return Response.error("Ошибка сервера: " + e.getMessage());
+        } catch (SQLException ex) {
+
+            return Response.error(
+                    com.quality.util.DatabaseErrorHandler.toUserMessage(ex)
+            );
+
+        } catch (IllegalArgumentException ex) {
+
+            return Response.error(
+                    "Некорректные входные данные."
+            );
+
+        } catch (RuntimeException ex) {
+
+            return Response.error(
+                    ex.getMessage() != null
+                            ? ex.getMessage()
+                            : "Ошибка выполнения операции."
+            );
+
+        } catch (Exception ex) {
+
+            return Response.error(
+                    "Неожиданная ошибка сервера."
+            );
         }
     }
 

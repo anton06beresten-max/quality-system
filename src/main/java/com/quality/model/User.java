@@ -41,6 +41,15 @@ public class User extends Entity {
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
 
+    public String getRoleDisplayName() {
+        switch (roleName) {
+            case "ADMIN": return "Администратор";
+            case "INSPECTOR": return "Инспектор";
+            case "MANAGER": return "Менеджер";
+            default: return roleName;
+        }
+    }
+
     @Override
     public String toString() {
         return "User{id=" + id + ", username='" + username + "', role='" + roleName + "'}";
